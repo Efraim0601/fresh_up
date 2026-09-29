@@ -1,0 +1,23 @@
+{
+  "name": "fresh-up",
+  "private": true,
+  "description": "Fresh Up - plateforme de vente de tissus et confection sur-mesure avec mannequin 3D",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev:web": "pnpm --filter @fresh-up/web dev",
+    "dev:api": "pnpm --filter @fresh-up/api start:dev",
+    "dev:ai": "cd apps/ai-service && (test -d .venv || python3 -m venv .venv) && . .venv/bin/activate && pip install -q -r requirements.txt && uvicorn app.main:app --reload --port 8000",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "prisma:generate": "pnpm --filter @fresh-up/api prisma:generate",
+    "prisma:migrate": "pnpm --filter @fresh-up/api prisma:migrate"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3"
+  }
+}

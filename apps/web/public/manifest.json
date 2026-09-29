@@ -1,0 +1,11 @@
+{
+  "name": "Fresh Up",
+  "short_name": "Fresh Up",
+  "description": "Choisissez votre tissu, habillez le mannequin 3D, commandez sur-mesure.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f3ef",
+  "theme_color": "#8a3b2e",
+  "orientation": "portrait",
+  "icons": []
+}

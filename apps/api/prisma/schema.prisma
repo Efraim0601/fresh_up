@@ -1,0 +1,174 @@
+// Schema Prisma - Fresh Up
+// Squelette Phase 1 : structure du modele de donnees du cahier des charges.
+// Aucune migration n'a encore ete appliquee sur ce scaffold (voir
+// docs/PHASE1_TASKS.md - "Finaliser et appliquer la premiere migration").
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  CLIENT
+  TAILOR
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum OrderStatus {
+  DRAFT // brouillon
+  VALIDATED // validee
+  PAID // payee
+  MEASUREMENTS_CONFIRMED // mesures confirmees
+  CUTTING // coupe
+  SEWING // couture
+  FITTING // essayage
+  READY // prete
+  DELIVERED // livree
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(CLIENT)
+  fullName     String?
+  phone        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  measurements   Measurement[]
+  designsAsOwner Design[]        @relation("DesignOwner")
+  ordersAsClient Order[]         @relation("OrderClient")
+  ordersAsTailor Order[]         @relation("OrderTailor")
+
+  @@map("users")
+}
+
+model Fabric {
+  id             String   @id @default(cuid())
+  name           String
+  category       String // ex: "homme", "femme", "mixte"
+  material       String // ex: "coton", "wax", "lin"
+  colors         String[] // codes hex ou noms de couleur
+  pricePerMeter  Int // en unite mineure de devise (ex: centimes)
+  currency       String   @default("XAF")
+  stockMeters    Decimal  @db.Decimal(10, 2)
+  rollWidthCm    Int
+  imageUrl       String?
+  albedoTextureUrl   String?
+  normalTextureUrl   String?
+  roughnessTextureUrl String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  designs Design[]
+
+  @@map("fabrics")
+}
+
+model GarmentModel {
+  id             String   @id @default(cuid())
+  name           String
+  type           String // ex: "chemise", "jupe", "pantalon"
+  gender         Gender
+  glbUrl         String? // fichier GLB dans le stockage S3
+  baseYardageM   Decimal  @db.Decimal(6, 2) // metrage de base avant regles
+  laborPriceCents Int
+  currency        String  @default("XAF")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  options GarmentOption[]
+  designs Design[]
+
+  @@map("garment_models")
+}
+
+model GarmentOption {
+  id             String   @id @default(cuid())
+  garmentModelId String
+  garmentModel   GarmentModel @relation(fields: [garmentModelId], references: [id])
+  category       String // ex: "col", "manches", "longueur", "coupe"
+  value          String // ex: "mao", "courtes", "hanches", "cintree"
+  extraYardageM  Decimal  @default(0) @db.Decimal(6, 2)
+
+  @@map("garment_options")
+}
+
+model Measurement {
+  id          String   @id @default(cuid())
+  clientId    String
+  client      User     @relation(fields: [clientId], references: [id])
+  values      Json // { taille, poitrine, tourDeTaille, hanches, epaules, ... } en cm
+  validatedBy String? // id du couturier ayant valide/corrige
+  validatedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  designs Design[]
+
+  @@map("measurements")
+}
+
+model Design {
+  id             String   @id @default(cuid())
+  ownerId        String
+  owner          User     @relation("DesignOwner", fields: [ownerId], references: [id])
+  fabricId       String
+  fabric         Fabric   @relation(fields: [fabricId], references: [id])
+  garmentModelId String
+  garmentModel   GarmentModel @relation(fields: [garmentModelId], references: [id])
+  measurementId  String?
+  measurement    Measurement? @relation(fields: [measurementId], references: [id])
+  selectedOptions Json // snapshot des GarmentOption choisies
+  renderSnapshotUrl String? // capture 3D figee (S3) au moment de la validation
+  designJson     Json? // fiche technique figee complete (JSON)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  orders Order[]
+
+  @@map("designs")
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  designId          String
+  design            Design      @relation(fields: [designId], references: [id])
+  clientId          String
+  client            User        @relation("OrderClient", fields: [clientId], references: [id])
+  tailorId          String?
+  tailor            User?       @relation("OrderTailor", fields: [tailorId], references: [id])
+  status            OrderStatus @default(DRAFT)
+  computedYardageM  Decimal     @db.Decimal(6, 2)
+  priceCents        Int
+  currency          String      @default("XAF")
+  paymentProvider   String? // "mock" | "stripe" | "orange_money" | ...
+  paymentReference  String?
+  notes             String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  events OrderEvent[]
+
+  @@map("orders")
+}
+
+model OrderEvent {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id])
+  status    OrderStatus
+  note      String?
+  createdAt DateTime    @default(now())
+
+  @@map("order_events")
+}

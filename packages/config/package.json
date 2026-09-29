@@ -1,0 +1,7 @@
+{
+  "name": "@fresh-up/config",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Configuration partagee (tsconfig de base) entre les apps TypeScript du monorepo.",
+  "files": ["base.tsconfig.json"]
+}

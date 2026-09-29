@@ -1,0 +1,107 @@
+# Fresh Up - environnement de developpement local
+# Usage: docker compose up -d postgres minio    (services d'infra uniquement,
+#        recommande pendant le dev pour lancer web/api/ai-service en local avec
+#        hot-reload via pnpm/uvicorn)
+#        docker compose --profile full up        (tout, y compris web/api/ai)
+#
+# Aucune dependance payante requise pour la phase 1.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: fresh_up_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-freshup}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-freshup_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-freshup}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ./docker/pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-freshup}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: fresh_up_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-freshup_minio_admin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-freshup_minio_dev_password}
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # Console web
+    volumes:
+      - ./docker/minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Backend LLM local pour l'IA niveau 1 (/ai/parse-outfit).
+  # Optionnel pour demarrer le reste du dev : le service ai-service bascule sur
+  # son repli par regles/mots-cles si Ollama n'est pas lance.
+  ollama:
+    image: ollama/ollama:latest
+    container_name: fresh_up_ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./docker/ollama-data:/root/.ollama
+    profiles:
+      - ai
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: fresh_up_api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-freshup}:${POSTGRES_PASSWORD:-freshup_dev_password}@postgres:5432/${POSTGRES_DB:-freshup}?schema=public
+      S3_ENDPOINT: http://minio:9000
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    profiles:
+      - full
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: fresh_up_web
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    profiles:
+      - full
+
+  ai-service:
+    build:
+      context: ./apps/ai-service
+    container_name: fresh_up_ai_service
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    profiles:
+      - full
