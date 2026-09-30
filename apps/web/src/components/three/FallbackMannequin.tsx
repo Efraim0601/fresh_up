@@ -12,8 +12,19 @@
  *
  * A remplacer par un vrai GLB (useGLTF depuis drei) des que le premier
  * mannequin reel est disponible - voir docs/PHASE1_TASKS.md.
+ *
+ * `fabricColor` (Phase 1) : couleur unie appliquee au buste + bassin pour
+ * simuler en direct le changement de tissu, en attendant le vrai pipeline de
+ * texture PBR (remplacement du materiau sans recharger le mesh/GLB, cf.
+ * docs/ARCHITECTURE.md).
  */
-export function FallbackMannequin() {
+export interface FallbackMannequinProps {
+  fabricColor?: string;
+}
+
+export function FallbackMannequin({ fabricColor }: FallbackMannequinProps) {
+  const garmentColor = fabricColor ?? "#c96f4c";
+
   return (
     <group position={[0, 0, 0]}>
       {/* Tete */}
@@ -22,16 +33,16 @@ export function FallbackMannequin() {
         <meshStandardMaterial color="#e8c9a8" roughness={0.6} />
       </mesh>
 
-      {/* Buste */}
+      {/* Buste (habille du tissu selectionne) */}
       <mesh position={[0, 1.25, 0]} castShadow receiveShadow>
         <capsuleGeometry args={[0.16, 0.45, 8, 16]} />
-        <meshStandardMaterial color="#c96f4c" roughness={0.7} />
+        <meshStandardMaterial color={garmentColor} roughness={0.7} />
       </mesh>
 
-      {/* Bassin */}
+      {/* Bassin (habille du tissu selectionne) */}
       <mesh position={[0, 0.85, 0]} castShadow receiveShadow>
         <capsuleGeometry args={[0.14, 0.15, 8, 16]} />
-        <meshStandardMaterial color="#8a3b2e" roughness={0.7} />
+        <meshStandardMaterial color={garmentColor} roughness={0.7} />
       </mesh>
 
       {/* Bras */}

@@ -14,8 +14,17 @@ import { FallbackMannequin } from "./FallbackMannequin";
  *
  * Remplacer <FallbackMannequin /> par le vrai mannequin (GLB + morph
  * targets, cf. docs/3D_ASSET_SPEC.md) des que disponible.
+ *
+ * `fabricColor` : propage la couleur du tissu selectionne dans le catalogue
+ * jusqu'au materiau du mannequin. Change en direct (prop React) sans jamais
+ * remonter le <Canvas> ni recharger le mesh - cf. "changement de tissu sans
+ * recharger le modele" dans docs/PHASE1_TASKS.md.
  */
-export function MannequinScene() {
+export interface MannequinSceneProps {
+  fabricColor?: string;
+}
+
+export function MannequinScene({ fabricColor }: MannequinSceneProps) {
   return (
     <div className="h-[60vh] w-full min-h-[320px] touch-none">
       <Canvas
@@ -32,7 +41,7 @@ export function MannequinScene() {
         />
 
         <Suspense fallback={null}>
-          <FallbackMannequin />
+          <FallbackMannequin fabricColor={fabricColor} />
           <ContactShadows
             position={[0, 0, 0]}
             opacity={0.4}

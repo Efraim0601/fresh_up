@@ -59,6 +59,8 @@ model Fabric {
   category       String // ex: "homme", "femme", "mixte"
   material       String // ex: "coton", "wax", "lin"
   colors         String[] // codes hex ou noms de couleur
+  couleurHex     String? // couleur unie de remplacement pour le rendu 3D (Phase 1,
+  // en attendant le pipeline de texture photo -> PBR, voir docs/PHASE1_TASKS.md)
   pricePerMeter  Int // en unite mineure de devise (ex: centimes)
   currency       String   @default("XAF")
   stockMeters    Decimal  @db.Decimal(10, 2)

@@ -20,6 +20,41 @@ paiement (Phase 2).
 - [x] Schema Prisma initial (squelette, sans migration appliquee)
 - [x] CI squelette (lint/build sur PR)
 
+## Fait (branche `phase1/fabric-catalog`)
+
+Premiere tranche concrete du catalogue de tissus, connectee de bout en bout
+(DB -> API -> front -> mannequin 3D) :
+
+- [x] Champ `couleurHex` (nullable) ajoute au modele `Fabric` (couleur unie
+      de remplacement pour le rendu 3D, en attendant le pipeline photo ->
+      texture PBR) + premiere migration Prisma appliquee et testee
+      (`apps/api/prisma/migrations/20260930134620_init_fabric_catalog`)
+- [x] Script de seed (`apps/api/prisma/seed.ts`) : 5 tissus placeholder
+      (homme/femme/mixte), nom, matiere, prix/m en XAF, `couleurHex` -
+      wire dans `prisma.seed` (`apps/api/package.json`), idempotent
+      (upsert par nom)
+- [x] `FabricsModule` NestJS (`apps/api/src/fabrics`) : `GET /fabrics`,
+      sans auth, via `PrismaService` partage (`apps/api/src/prisma`)
+- [x] Catalogue front mobile-first (`apps/web/src/components/FabricCatalog.tsx`) :
+      grille de vignettes (nom, prix/m, pastille de couleur), etats
+      chargement/vide/erreur, ne casse pas si l'API est injoignable
+- [x] Selection de tissu cablee au mannequin 3D (`FabricAtelier.tsx` leve
+      l'etat, transmis en prop a `MannequinScene`/`FallbackMannequin`) :
+      changement de couleur en direct, sans remonter le `<Canvas>` ni
+      recharger le mesh
+
+Commande de seed (a executer avec `DATABASE_URL` pointant vers la base
+cible) :
+
+```
+pnpm --filter @fresh-up/api prisma:seed
+```
+
+Volontairement laisse de cote dans cette tranche (voir taches ci-dessous et
+"Hors scope") : vrai pipeline photo -> texture PBR (couleur unie
+uniquement), `GarmentModel`/`GarmentOption` (pieces de vetement), mesures,
+flux de commande, auth.
+
 ## Reste a faire pour cloturer la Phase 1
 
 ### Mannequin 3D et rendu
@@ -46,20 +81,23 @@ paiement (Phase 2).
 
 ### Tissus
 
-- [ ] Definir/produire 5 tissus placeholder (photo + metadonnees : nom,
-      categorie, matiere, couleurs, prix/m, largeur de rouleau)
+- [x] Definir/produire 5 tissus placeholder (metadonnees : nom, categorie,
+      matiere, couleurs, prix/m, largeur de rouleau - voir
+      `apps/api/prisma/seed.ts`). Photo produit reelle : toujours a faire,
+      `couleurHex` sert de repli visuel pour le mannequin en attendant.
 - [ ] Pipeline (meme minimal/manuel en phase 1) photo -> texture tileable +
       cartes PBR (albedo, normal, roughness) - automatisation complete
       repoussee en Phase 2 ("ajout rapide d'un tissu" cote admin)
 - [ ] Stocker les 5 tissus + textures dans MinIO (bucket
-      `fresh-up-fabrics`) et les exposer via l'API (endpoint simple, meme non
-      authentifie en phase 1)
+      `fresh-up-fabrics`) - l'API expose deja `GET /fabrics` (donnees, pas
+      encore d'images reelles)
 
 ### Backend / API
 
-- [ ] Finaliser et appliquer la premiere migration Prisma
-      (`apps/api/prisma/schema.prisma` -> `prisma migrate dev`)
-- [ ] Endpoint minimal `GET /fabrics` (liste des 5 tissus) pour alimenter le
+- [x] Finaliser et appliquer la premiere migration Prisma
+      (`apps/api/prisma/schema.prisma` -> `prisma migrate dev`,
+      `20260930134620_init_fabric_catalog`)
+- [x] Endpoint minimal `GET /fabrics` (liste des tissus) pour alimenter le
       front - sans auth en phase 1 (l'auth/roles arrivent en Phase 2)
 - [ ] Endpoint minimal `GET /garment-models` (les 3 vetements) avec leurs
       options de base
@@ -68,11 +106,14 @@ paiement (Phase 2).
 
 ### Front-end
 
-- [ ] Ecran "Atelier mannequin" minimal : mannequin en haut, selecteur de
-      tissu en bas (les 5 tissus), curseurs de mesures
-- [ ] Connexion au endpoint `GET /fabrics` / `GET /garment-models` de
-      `apps/api` (remplacer les donnees mock du scaffold)
-- [ ] Verifier le rendu mobile first des le viewport 360px
+- [x] Ecran "Atelier mannequin" minimal : mannequin en haut, catalogue de
+      tissus en bas (`FabricAtelier.tsx`) - curseurs de mesures restent a
+      faire (pas de `Measurement`/morph targets en phase 1)
+- [x] Connexion au endpoint `GET /fabrics` de `apps/api` (remplace les
+      donnees mock) - `GET /garment-models` reste a faire (pas de
+      `GarmentModel` seede en phase 1)
+- [x] Verifier le rendu mobile first des le viewport 360px (grille catalogue
+      2 colonnes, `next build` OK)
 - [ ] PWA installable de base (manifest + service worker minimal)
 
 ### Infra / DX
